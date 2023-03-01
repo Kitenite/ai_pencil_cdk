@@ -5,5 +5,5 @@ import { PipelineStack } from '../lib/pipeline-stack';
 import { APP_NAME } from '../lib/constants';
 
 const app = new cdk.App();
-
 new PipelineStack(app, `${APP_NAME}PipelineStack`, {});
+app.synth();
