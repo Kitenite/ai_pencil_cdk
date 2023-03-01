@@ -1,8 +1,23 @@
-# Welcome to your CDK TypeScript project
+# Ai Pencil CDK
+The official cdk for Ai Pencil
 
-This is a blank project for CDK development with TypeScript.
+# Deployment Stages
+Our PROD resources will be in `us-west-2` and our BETA resources will be in `us-east-1`.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+To publish to just Beta, run:
+```
+cdk deploy AiPencilBetaAsyncStack
+```
+
+To publish to just Prod, run:
+```
+cdk deploy AiPencilProdAsyncStack
+```
+
+To publish to both regions, run:
+```
+cdk deploy --all
+```
 
 ## Useful commands
 
