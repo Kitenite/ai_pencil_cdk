@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
+import { CodePipeline, CodePipelineSource, ManualApprovalStep, ShellStep } from 'aws-cdk-lib/pipelines';
 import { APP_NAME } from './constants';
 import { PipelineStage, PipelineStages } from './stage';
 
@@ -16,12 +16,14 @@ export class PipelineStack extends cdk.Stack {
       })
     });
 
-    pipeline.addStage(new PipelineStage(this, `${APP_NAME}BetaStage`, {
+    const betaStage = pipeline.addStage(new PipelineStage(this, `${APP_NAME}BetaStage`, {
       stage: PipelineStages.BETA
     }));
 
-    pipeline.addStage(new PipelineStage(this, `${APP_NAME}ProdStage`, {
-      stage: PipelineStages.BETA
+    betaStage.addPost(new ManualApprovalStep('approval'));
+
+    const prodStage = pipeline.addStage(new PipelineStage(this, `${APP_NAME}ProdStage`, {
+      stage: PipelineStages.PROD
     }));
   }
 }
