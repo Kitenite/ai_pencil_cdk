@@ -12,6 +12,9 @@ type Request struct {
 }
 
 func HandleRequest(ctx context.Context, request Request) (string, error) {
+	// Initialize the image to image handler
+	
+	// Return response
 	return fmt.Sprintf("Prompt %s, Image: ", request.prompt, request.image ), nil
 }
 

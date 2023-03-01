@@ -1,7 +1,8 @@
-import { Duration, Stack, StackProps } from "aws-cdk-lib";
+import { GoFunction } from "@aws-cdk/aws-lambda-go-alpha";
+import { Stack, StackProps } from "aws-cdk-lib";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
 import { AttributeType, Table } from "aws-cdk-lib/aws-dynamodb";
-import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Function } from "aws-cdk-lib/aws-lambda";
 import { Bucket } from "aws-cdk-lib/aws-s3";
 import { ISecret, Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
@@ -16,21 +17,20 @@ export class AsynStack extends Stack {
     readonly stage: PipelineStages
 
     //Storage
-    // TODO: Add users
     // readonly userTable: Table
-    readonly imageBucket: Bucket
-    readonly promptTable: Table
-    readonly promptStylesTable: Table
+    // readonly imageBucket: Bucket
+    // readonly promptTable: Table
+    // readonly promptStylesTable: Table
 
     // Lambda
     // readonly userLambda: Function
-    readonly imageHandlerLambda: Function
+    // readonly imageHandlerLambda: Function
     readonly imageToImageLambda: Function
-    readonly feedbackLambda: Function
-    readonly promptStylesLambda: Function
+    // readonly feedbackLambda: Function
+    // readonly promptStylesLambda: Function
 
     // Misc
-    readonly firebaseSecret: ISecret
+    // readonly firebaseSecret: ISecret
     readonly stabilitySecret: ISecret
     readonly inferenceApi: RestApi
 
@@ -43,9 +43,9 @@ export class AsynStack extends Stack {
 
         // Storage
         // this.userTable = this.createUserTable()
-        this.imageBucket = this.createImageBucket()
-        this.promptTable = this.createPromptTable()
-        this.promptStylesTable = this.createPromptStylesTable()
+        // this.imageBucket = this.createImageBucket()
+        // this.promptTable = this.createPromptTable()
+        // this.promptStylesTable = this.createPromptStylesTable()
 
         // Lambdas
         // this.userLambda = this.createUserLambda()
@@ -60,7 +60,7 @@ export class AsynStack extends Stack {
         // Add permissions. Needs to be after Lambdas.
         // this.userTable.grantReadWriteData(this.userLambda)
         this.stabilitySecret.grantRead(this.imageToImageLambda)
-        this.imageBucket.grantPutAcl(this.imageToImageLambda)
+        // this.imageBucket.grantPutAcl(this.imageToImageLambda)
         // this.imageBucket.grantRead(this.imageHandlerLambda)
         // this.imageBucket.grantReadWrite(this.imageHandlerLambda)
         // this.promptStylesTable.grantReadData(this.promptStylesLambda)
@@ -68,7 +68,7 @@ export class AsynStack extends Stack {
 
     createImageBucket(){
         return new Bucket(this, `${APP_NAME}${this.stage}ImageBucket`, {
-            bucketName: 'ai-pencil-image-bucket',
+            bucketName: `${APP_NAME.toLowerCase()}-${this.stage.toLowerCase()}-image-bucket`,
         })
     }
 
@@ -97,24 +97,20 @@ export class AsynStack extends Stack {
     }
 
     createImageToImageLambda() {
-        return new Function(this, `${APP_NAME}${this.stage}ImageToImageLambda`, {
-            functionName: `${APP_NAME}${this.stage}ImageToImageLambda`,
-            runtime: Runtime.GO_1_X,
-            code: Code.fromAsset('./lambda/image_to_image'),
-            handler: 'main',
-            timeout: Duration.seconds(60),
-            memorySize: 1024,
-            environment: {
-                'IMAGE_BUCKET_NAME': this.imageBucket.bucketName,
-                'STABILITY_SECRET_ARN': this.stabilitySecret.secretArn,
+        return new GoFunction(this, `${APP_NAME}${this.stage}ImageToImageLambda`, {
+            entry: './lambda/image-to-image',
+            bundling: {
+                environment: {
+                    // 'IMAGE_BUCKET_NAME': this.imageBucket.bucketName,
+                    'STABILITY_SECRET_ARN': this.stabilitySecret.secretArn,
+                },
             },
         });
     }
 
     getFirebaseSecret() {
         const secret = Secret.fromSecretAttributes(this, "FirebaseKeySecret", {
-            secretCompleteArn:
-            FIREBASE_SECRET_ARN
+            secretCompleteArn: FIREBASE_SECRET_ARN
         });
         return secret
     }
@@ -144,18 +140,18 @@ export class AsynStack extends Stack {
                 allowOrigins: ['http://localhost:3000'],
             },
         });
-        
+
         // const userEndpoint = inferenceApi.root.addResource('user');
         const imageToImageEndpoint = inferenceApi.root.addResource('image-to-image');
-        const imageEndpoint = inferenceApi.root.addResource('image');
-        const promptStylesEndpoint = inferenceApi.root.addResource('prompt-styles');
-        const feedbackEndpoint = inferenceApi.root.addResource('feedback');
+        // const imageEndpoint = inferenceApi.root.addResource('image');
+        // const promptStylesEndpoint = inferenceApi.root.addResource('prompt-styles');
+        // const feedbackEndpoint = inferenceApi.root.addResource('feedback');
 
         // userEndpoint.addMethod('POST', new LambdaIntegration(this.userLambda));
         imageToImageEndpoint.addMethod('POST', new LambdaIntegration(this.imageToImageLambda));
-        imageEndpoint.addMethod('POST', new LambdaIntegration(this.imageHandlerLambda));
-        feedbackEndpoint.addMethod('POST', new LambdaIntegration(this.feedbackLambda));
-        promptStylesEndpoint.addMethod('GET', new LambdaIntegration(this.promptStylesLambda));
+        // imageEndpoint.addMethod('POST', new LambdaIntegration(this.imageHandlerLambda));
+        // feedbackEndpoint.addMethod('POST', new LambdaIntegration(this.feedbackLambda));
+        // promptStylesEndpoint.addMethod('GET', new LambdaIntegration(this.promptStylesLambda));
 
         return inferenceApi
     }

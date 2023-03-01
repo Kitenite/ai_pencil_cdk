@@ -17,7 +17,7 @@ export class PipelineStage extends Stage {
     constructor(scope: Construct, id: string, props: PipelineStageProps) {
       super(scope, id, props);
   
-      const asynStack = new AsynStack(this, `${APP_NAME}${props.stage}AsyncStack`, {
+      const asyncStack = new AsynStack(this, `${APP_NAME}${props.stage}AsyncStack`, {
         stage: props.stage
       });
     }
