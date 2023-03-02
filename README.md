@@ -1,6 +1,12 @@
 # Ai Pencil CDK
 The official cdk for Ai Pencil
 
+# Lambda depencencies
+After adding a dependency to lambda, we need to run this command before deploying to build the dependencies:
+```
+pip3 install -r lambda/layer/requirements.txt --target lambda/layer/python/lib/python3.7/site-packages
+```
+
 # Deployment Stages
 Our PROD resources will be in `us-west-2` and our BETA resources will be in `us-east-1`.
 
