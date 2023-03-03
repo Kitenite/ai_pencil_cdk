@@ -29,12 +29,16 @@ def handler(event, context):
     print("Received event: " + json.dumps(event, indent=2))
 
     body = json.loads(event["body"])
+
     # Get params
-    prompt = body['prompt']
-    cfg_scale = body['cfg_scale']
-    seed = body['seed']
-    sampler_index = body['sampler_index']
-    denoising_strength = body['denoising_strength']
+    prompt = body['prompt'] 
+    # Advanced options
+    advanced_options = body['advancedOptions']
+    cfg_scale = advanced_options['cfgScale']
+    seed = advanced_options['seed']
+    sampler_index = advanced_options['samplerIndex']
+    denoising_strength = advanced_options['denoisingStrength']
+
     init_img = None
     if body and 'init_img' in body:
         init_img = body['init_img']
