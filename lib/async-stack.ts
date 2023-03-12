@@ -18,7 +18,7 @@ export class AsynStack extends Stack {
 
     //Storage
     // readonly userTable: Table
-    // readonly imageBucket: Bucket
+    readonly imageBucket: Bucket
     // readonly promptTable: Table
     // readonly promptStylesTable: Table
 
@@ -27,7 +27,7 @@ export class AsynStack extends Stack {
     readonly generateImageLambda: Function
     readonly textToTextLambda: Function
     // readonly userLambda: Function
-    // readonly imageHandlerLambda: Function
+    readonly uploadImageLambda: Function
     // readonly feedbackLambda: Function
     // readonly promptStylesLambda: Function
 
@@ -47,7 +47,7 @@ export class AsynStack extends Stack {
 
         // Storage
         // this.userTable = this.createUserTable()
-        // this.imageBucket = this.createImageBucket()
+        this.imageBucket = this.createImageBucket()
         // this.promptTable = this.createPromptTable()
         // this.promptStylesTable = this.createPromptStylesTable()
 
@@ -57,7 +57,7 @@ export class AsynStack extends Stack {
         this.textToTextLambda = this.createTextToTextLambda()
         // this.userLambda = this.createUserLambda()
         // this.feedbackLambda = this.createFeedbackLambda()
-        // this.imageHandlerLambda = this.createImageHandlerLambda()
+        this.uploadImageLambda = this.createUploadImageLambda()
         // this.promptStylesLambda = this.createPromptStylesLambda()
 
         // Api
@@ -67,9 +67,9 @@ export class AsynStack extends Stack {
         // this.userTable.grantReadWriteData(this.userLambda)
         this.stabilitySecret.grantRead(this.generateImageLambda)
         this.openAiSecret.grantRead(this.textToTextLambda)
-        // this.imageBucket.grantPutAcl(this.imageHandlerLambda)
-        // this.imageBucket.grantRead(this.imageHandlerLambda)
-        // this.imageBucket.grantReadWrite(this.imageHandlerLambda)
+        this.imageBucket.grantPutAcl(this.uploadImageLambda)
+        this.imageBucket.grantRead(this.uploadImageLambda)
+        this.imageBucket.grantReadWrite(this.uploadImageLambda)
         // this.promptStylesTable.grantReadData(this.promptStylesLambda)
     }
 
@@ -173,6 +173,22 @@ export class AsynStack extends Stack {
     }
 
 
+    createUploadImageLambda() {
+        const name = `${APP_NAME}${this.stage}UploadImageLambda`
+        return new Function(this, name, {
+            functionName: name,
+            code: Code.fromAsset('./lambda/'),
+            runtime: Runtime.PYTHON_3_7,
+            handler: "upload_image.handler",
+            timeout: Duration.seconds(900),
+            layers: [
+                this.lambdaDependencyLayer, 
+            ],
+            environment: {
+                BUCKET_NAME: this.imageBucket.bucketName,
+            }
+        })
+    }
 
     createApi(stage: PipelineStages){
         const api = new RestApi(this, `${APP_NAME}${this.stage}API`, {
@@ -196,14 +212,14 @@ export class AsynStack extends Stack {
         // const userEndpoint = inferenceApi.root.addResource('user');
         const generateImageEndpoint = api.root.addResource('generate-image');
         const textToTextEndpoint = api.root.addResource('text-to-text');
-        // const imageEndpoint = inferenceApi.root.addResource('image');
+        const uploadImageEndpoint = api.root.addResource('upload-image');
         // const promptStylesEndpoint = inferenceApi.root.addResource('prompt-styles');
         // const feedbackEndpoint = inferenceApi.root.addResource('feedback');
 
         // userEndpoint.addMethod('POST', new LambdaIntegration(this.userLambda));
         generateImageEndpoint.addMethod('POST', new LambdaIntegration(this.generateImageLambda));
         textToTextEndpoint.addMethod('POST', new LambdaIntegration(this.textToTextLambda));
-        // imageEndpoint.addMethod('POST', new LambdaIntegration(this.imageHandlerLambda));
+        uploadImageEndpoint.addMethod('POST', new LambdaIntegration(this.uploadImageLambda));
         // feedbackEndpoint.addMethod('POST', new LambdaIntegration(this.feedbackLambda));
         // promptStylesEndpoint.addMethod('GET', new LambdaIntegration(this.promptStylesLambda));
         return api
