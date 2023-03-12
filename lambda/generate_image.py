@@ -32,6 +32,9 @@ def handler(event, context):
 
     # Get params
     prompt = body['prompt'] 
+    width = int(body.get('width', 512))
+    height = int(body.get('height', 512))
+
     # Advanced options
     advanced_options = body['advancedOptions']
     cfg_scale = advanced_options['cfgScale']
@@ -40,8 +43,8 @@ def handler(event, context):
     denoising_strength = advanced_options['denoisingStrength']
 
     init_img = None
-    if body and 'init_img' in body:
-        init_img = body['init_img']
+    if body and 'image' in body:
+        init_img = body['image']
 
     # Create client connection
     stability_api = client.StabilityInference(
@@ -54,7 +57,7 @@ def handler(event, context):
     if init_img: 
         # Image to image
         pil_init_image = Image.open(BytesIO(base64.b64decode(init_img)))
-        pil_init_image.thumbnail((512, 512))
+        # pil_init_image.thumbnail((512, 512))
         answers = stability_api.generate(
             prompt=prompt,
             init_image=pil_init_image,
@@ -62,8 +65,8 @@ def handler(event, context):
             seed=seed,
             steps=30,
             cfg_scale=cfg_scale,
-            width=512,
-            height=512,
+            width=width,
+            height=height,
             sampler=generation.SAMPLER_K_DPMPP_2M
         )
     else :
@@ -73,8 +76,8 @@ def handler(event, context):
             seed=seed, 
             steps=30,
             cfg_scale=cfg_scale,
-            width=512,
-            height=512,
+            width=width,
+            height=height,
             samples=1,
             sampler=generation.SAMPLER_K_DPMPP_2M 
         )
@@ -83,7 +86,7 @@ def handler(event, context):
     response =  {
         "statusCode": 500,
         'headers': { 'Content-Type': 'application/json' },
-        "body": "Unknown error occurred",
+        "body":  json.dumps({'error': "Unknown error"}),
     }
     for resp in answers:
         for artifact in resp.artifacts:
