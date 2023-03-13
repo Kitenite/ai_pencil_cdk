@@ -1,4 +1,3 @@
-import { GoFunction } from "@aws-cdk/aws-lambda-go-alpha";
 import { Duration, Stack, StackProps } from "aws-cdk-lib";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
 import { AttributeType, Table } from "aws-cdk-lib/aws-dynamodb";
@@ -6,7 +5,7 @@ import { Code, Function, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Bucket } from "aws-cdk-lib/aws-s3";
 import { ISecret, Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
-import { APP_NAME, FIREBASE_SECRET_ARN, OPEN_AI_SECRET_ARN, STABILITY_SECRET_ARN } from './constants';
+import { APP_NAME, OPEN_AI_SECRET_ARN, SD_API_SECRET_ARN, STABILITY_SECRET_ARN } from './constants';
 import { PipelineStages } from "./stage";
 
 export interface AsycnStackProps extends StackProps {
@@ -25,6 +24,7 @@ export class AsynStack extends Stack {
     // Lambda
     readonly lambdaDependencyLayer: LayerVersion
     readonly generateImageLambda: Function
+    readonly controlNetLambda: Function
     readonly textToTextLambda: Function
     // readonly userLambda: Function
     readonly uploadImageLambda: Function
@@ -34,6 +34,7 @@ export class AsynStack extends Stack {
     // Misc
     // readonly firebaseSecret: ISecret
     readonly stabilitySecret: ISecret
+    readonly sdSecret: ISecret
     readonly openAiSecret: ISecret
     readonly api: RestApi
 
@@ -41,9 +42,10 @@ export class AsynStack extends Stack {
         super(scope, id, props);
         this.stage = props.stage
         // Secrets
-        // this.firebaseSecret = this.getFirebaseSecret()
-        this.stabilitySecret = this.getStabilitySecret()
-        this.openAiSecret = this.getOpenAiSecret()
+        // this.firebaseSecret = this.getFirebaseSecret("FirebaseKeySecret" , FIREBASE_SECRET_ARN)
+        this.stabilitySecret = this.getSecret("StabilityKeySecret", STABILITY_SECRET_ARN)
+        this.sdSecret = this.getSecret("SdKeySecret", SD_API_SECRET_ARN)
+        this.openAiSecret = this.getSecret("OpenAiKeySecret", OPEN_AI_SECRET_ARN)
 
         // Storage
         // this.userTable = this.createUserTable()
@@ -54,6 +56,7 @@ export class AsynStack extends Stack {
         // Lambdas
         this.lambdaDependencyLayer = this.createLambdaDependencyLayer()
         this.generateImageLambda = this.createGenerateImageLambda()
+        this.controlNetLambda = this.createControlNetLambda()
         this.textToTextLambda = this.createTextToTextLambda()
         // this.userLambda = this.createUserLambda()
         // this.feedbackLambda = this.createFeedbackLambda()
@@ -67,30 +70,17 @@ export class AsynStack extends Stack {
         // this.userTable.grantReadWriteData(this.userLambda)
         this.stabilitySecret.grantRead(this.generateImageLambda)
         this.openAiSecret.grantRead(this.textToTextLambda)
+        this.sdSecret.grantRead(this.controlNetLambda)
+
         this.imageBucket.grantPutAcl(this.uploadImageLambda)
-        this.imageBucket.grantRead(this.uploadImageLambda)
         this.imageBucket.grantReadWrite(this.uploadImageLambda)
+        this.imageBucket.grantRead(this.controlNetLambda)
         // this.promptStylesTable.grantReadData(this.promptStylesLambda)
     }
 
-    // Get secrets
-    getFirebaseSecret() {
-        const secret = Secret.fromSecretAttributes(this, "FirebaseKeySecret", {
-            secretCompleteArn: FIREBASE_SECRET_ARN
-        });
-        return secret
-    }
-
-    getStabilitySecret() {
-        const secret = Secret.fromSecretAttributes(this, "StabilityKeySecret", {
-            secretCompleteArn: STABILITY_SECRET_ARN
-        });
-        return secret
-    }
-
-    getOpenAiSecret() {
-        const secret = Secret.fromSecretAttributes(this, "OpenAiKeySecret", {
-            secretCompleteArn: OPEN_AI_SECRET_ARN
+    getSecret(id: string, arn: string) {
+        const secret = Secret.fromSecretAttributes(this, id, {
+            secretCompleteArn: arn
         });
         return secret
     }
@@ -155,6 +145,24 @@ export class AsynStack extends Stack {
         })
     }
 
+    createControlNetLambda() {
+        const name = `${APP_NAME}${this.stage}ControlNetLambda`
+        return new Function(this, name, {
+            functionName: name,
+            code: Code.fromAsset('./lambda/'),
+            runtime: Runtime.PYTHON_3_7,
+            handler: "controlnet.handler",
+            timeout: Duration.seconds(900),
+            layers: [
+                this.lambdaDependencyLayer, 
+            ],
+            environment: {
+                SD_API_KEY_ARN: this.sdSecret.secretFullArn?.toString() || SD_API_SECRET_ARN,
+                BUCKET_NAME: this.imageBucket.bucketName,
+            }
+        })
+    }
+
     createTextToTextLambda() {
         const name = `${APP_NAME}${this.stage}TextToTextLambda`
         return new Function(this, name, {
@@ -171,7 +179,6 @@ export class AsynStack extends Stack {
             }
         })
     }
-
 
     createUploadImageLambda() {
         const name = `${APP_NAME}${this.stage}UploadImageLambda`
@@ -211,6 +218,8 @@ export class AsynStack extends Stack {
 
         // const userEndpoint = inferenceApi.root.addResource('user');
         const generateImageEndpoint = api.root.addResource('generate-image');
+        const controlNetEndpoint = api.root.addResource('controlnet');
+
         const textToTextEndpoint = api.root.addResource('text-to-text');
         const uploadImageEndpoint = api.root.addResource('upload-image');
         // const promptStylesEndpoint = inferenceApi.root.addResource('prompt-styles');
@@ -218,6 +227,8 @@ export class AsynStack extends Stack {
 
         // userEndpoint.addMethod('POST', new LambdaIntegration(this.userLambda));
         generateImageEndpoint.addMethod('POST', new LambdaIntegration(this.generateImageLambda));
+        controlNetEndpoint.addMethod('POST', new LambdaIntegration(this.controlNetLambda));
+
         textToTextEndpoint.addMethod('POST', new LambdaIntegration(this.textToTextLambda));
         uploadImageEndpoint.addMethod('POST', new LambdaIntegration(this.uploadImageLambda));
         // feedbackEndpoint.addMethod('POST', new LambdaIntegration(this.feedbackLambda));
