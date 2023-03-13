@@ -34,7 +34,7 @@ export class AsynStack extends Stack {
     // Misc
     // readonly firebaseSecret: ISecret
     readonly stabilitySecret: ISecret
-    readonly sdSecret: ISecret
+    readonly sdApiSecret: ISecret
     readonly openAiSecret: ISecret
     readonly api: RestApi
 
@@ -44,7 +44,7 @@ export class AsynStack extends Stack {
         // Secrets
         // this.firebaseSecret = this.getFirebaseSecret("FirebaseKeySecret" , FIREBASE_SECRET_ARN)
         this.stabilitySecret = this.getSecret("StabilityKeySecret", STABILITY_SECRET_ARN)
-        this.sdSecret = this.getSecret("SdKeySecret", SD_API_SECRET_ARN)
+        this.sdApiSecret = this.getSecret("SdApiKeySecret", SD_API_SECRET_ARN)
         this.openAiSecret = this.getSecret("OpenAiKeySecret", OPEN_AI_SECRET_ARN)
 
         // Storage
@@ -70,7 +70,7 @@ export class AsynStack extends Stack {
         // this.userTable.grantReadWriteData(this.userLambda)
         this.stabilitySecret.grantRead(this.generateImageLambda)
         this.openAiSecret.grantRead(this.textToTextLambda)
-        this.sdSecret.grantRead(this.controlNetLambda)
+        this.sdApiSecret.grantRead(this.controlNetLambda)
 
         this.imageBucket.grantPutAcl(this.uploadImageLambda)
         this.imageBucket.grantReadWrite(this.uploadImageLambda)
@@ -157,7 +157,7 @@ export class AsynStack extends Stack {
                 this.lambdaDependencyLayer, 
             ],
             environment: {
-                SD_API_KEY_ARN: this.sdSecret.secretFullArn?.toString() || SD_API_SECRET_ARN,
+                SD_API_KEY_ARN: this.sdApiSecret.secretFullArn?.toString() || SD_API_SECRET_ARN,
                 BUCKET_NAME: this.imageBucket.bucketName,
             }
         })
