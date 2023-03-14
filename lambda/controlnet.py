@@ -51,13 +51,13 @@ def handler(event, context):
 
     # Get params
     prompt = body['prompt'] 
-    init_image = body['image']
+    init_image = body['imageUrl']
     width = int(body.get('width', 512))
     height = int(body.get('height', 512))
     model_id = body.get('modelId', "sd-1.5")
     controlnet_model = body.get('controlnetModel', "scribble")
 
-    advanced_options = body['advancedOptions']
+    advanced_options = body.get('advancedOptions', {})
 
     samples = advanced_options.get('samples', "1")
     num_inference_steps = advanced_options.get('numInferenceSteps', "30")

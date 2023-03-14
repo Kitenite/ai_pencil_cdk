@@ -37,7 +37,7 @@ def handler(event, context):
         "headers": {
             "Content-Type": "application/json"
         },
-        "body":  json.dumps({'img_url': download_url}),
+        "body":  json.dumps({'url': download_url}),
     }
 
     return response
