@@ -1,3 +1,4 @@
 requests
 stability-sdk
 openai
+replicate

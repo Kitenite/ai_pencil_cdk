@@ -5,7 +5,7 @@ import { Code, Function, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Bucket } from "aws-cdk-lib/aws-s3";
 import { ISecret, Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
-import { APP_NAME, OPEN_AI_SECRET_ARN, SD_API_SECRET_ARN, STABILITY_SECRET_ARN } from './constants';
+import { APP_NAME, OPEN_AI_SECRET_ARN, REPLICATE_KEY_ARN, STABILITY_SECRET_ARN } from './constants';
 import { PipelineStages } from "./stage";
 
 export interface AsycnStackProps extends StackProps {
@@ -34,7 +34,7 @@ export class AsynStack extends Stack {
     // Misc
     // readonly firebaseSecret: ISecret
     readonly stabilitySecret: ISecret
-    readonly sdApiSecret: ISecret
+    readonly replicateSecret: ISecret
     readonly openAiSecret: ISecret
     readonly api: RestApi
 
@@ -44,7 +44,7 @@ export class AsynStack extends Stack {
         // Secrets
         // this.firebaseSecret = this.getFirebaseSecret("FirebaseKeySecret" , FIREBASE_SECRET_ARN)
         this.stabilitySecret = this.getSecret("StabilityKeySecret", STABILITY_SECRET_ARN)
-        this.sdApiSecret = this.getSecret("SdApiKeySecret", SD_API_SECRET_ARN)
+        this.replicateSecret = this.getSecret("ReplicateSecret", REPLICATE_KEY_ARN)
         this.openAiSecret = this.getSecret("OpenAiKeySecret", OPEN_AI_SECRET_ARN)
 
         // Storage
@@ -70,7 +70,7 @@ export class AsynStack extends Stack {
         // this.userTable.grantReadWriteData(this.userLambda)
         this.stabilitySecret.grantRead(this.generateImageLambda)
         this.openAiSecret.grantRead(this.textToTextLambda)
-        this.sdApiSecret.grantRead(this.controlNetLambda)
+        this.replicateSecret.grantRead(this.controlNetLambda)
 
         this.imageBucket.grantPutAcl(this.uploadImageLambda)
         this.imageBucket.grantReadWrite(this.uploadImageLambda)
@@ -157,8 +157,7 @@ export class AsynStack extends Stack {
                 this.lambdaDependencyLayer, 
             ],
             environment: {
-                SD_API_KEY_ARN: this.sdApiSecret.secretFullArn?.toString() || SD_API_SECRET_ARN,
-                BUCKET_NAME: this.imageBucket.bucketName,
+                REPLICATE_KEY_ARN: this.replicateSecret.secretFullArn?.toString() || REPLICATE_KEY_ARN,
             }
         })
     }
