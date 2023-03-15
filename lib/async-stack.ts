@@ -3,6 +3,7 @@ import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
 import { AttributeType, Table } from "aws-cdk-lib/aws-dynamodb";
 import { Code, Function, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Bucket } from "aws-cdk-lib/aws-s3";
+import { BucketDeployment, Source } from "aws-cdk-lib/aws-s3-deployment";
 import { ISecret, Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 import { APP_NAME, OPEN_AI_SECRET_ARN, REPLICATE_KEY_ARN, STABILITY_SECRET_ARN } from './constants';
@@ -18,6 +19,8 @@ export class AsynStack extends Stack {
     //Storage
     // readonly userTable: Table
     readonly imageBucket: Bucket
+    readonly styleImageBucket: Bucket
+    readonly styleImageBucketDeployment: BucketDeployment
     // readonly promptTable: Table
     // readonly promptStylesTable: Table
 
@@ -29,7 +32,7 @@ export class AsynStack extends Stack {
     // readonly userLambda: Function
     readonly uploadImageLambda: Function
     // readonly feedbackLambda: Function
-    // readonly promptStylesLambda: Function
+    readonly promptStylesLambda: Function
 
     // Misc
     // readonly firebaseSecret: ISecret
@@ -50,6 +53,8 @@ export class AsynStack extends Stack {
         // Storage
         // this.userTable = this.createUserTable()
         this.imageBucket = this.createImageBucket()
+        this.styleImageBucket = this.createStyleImageBucket()
+        this.styleImageBucketDeployment = this.createStyleImageBucketDeployment()
         // this.promptTable = this.createPromptTable()
         // this.promptStylesTable = this.createPromptStylesTable()
 
@@ -61,7 +66,7 @@ export class AsynStack extends Stack {
         // this.userLambda = this.createUserLambda()
         // this.feedbackLambda = this.createFeedbackLambda()
         this.uploadImageLambda = this.createUploadImageLambda()
-        // this.promptStylesLambda = this.createPromptStylesLambda()
+        this.promptStylesLambda = this.createPromptStylesLambda()
 
         // Api
         this.api = this.createApi(props.stage)
@@ -97,6 +102,13 @@ export class AsynStack extends Stack {
     createImageBucket(){
         return new Bucket(this, `${APP_NAME}${this.stage}ImageBucket`, {
             bucketName: `${APP_NAME.toLowerCase()}-${this.stage.toLowerCase()}-image-bucket`,
+        })
+    }
+
+    createStyleImageBucket() {
+        return new Bucket(this, `${APP_NAME}${this.stage}StyleImageBucket`, {
+            bucketName: `${APP_NAME.toLowerCase()}-${this.stage.toLowerCase()}-style-image-bucket`,
+            publicReadAccess: true,
         })
     }
 
@@ -196,6 +208,30 @@ export class AsynStack extends Stack {
         })
     }
 
+    createStyleImageBucketDeployment() {
+        return new BucketDeployment(this, `${APP_NAME}${this.stage}StyleImageBucketDeployment`, {
+            sources: [Source.asset('./resources/style_images')],
+            destinationBucket: this.styleImageBucket,
+        })
+    }
+
+    createPromptStylesLambda() {
+        const name = `${APP_NAME}${this.stage}PromptStylesLambda`
+        return new Function(this, name, {
+            functionName: name,
+            code: Code.fromAsset('./lambda/'),
+            runtime: Runtime.PYTHON_3_7,
+            handler: "prompt_styles.handler",
+            timeout: Duration.seconds(15),
+            layers: [
+                this.lambdaDependencyLayer, 
+            ],
+            environment: {
+                BUCKET_NAME: this.styleImageBucket.bucketName,
+            }
+        })
+    }
+
     createApi(stage: PipelineStages){
         const api = new RestApi(this, `${APP_NAME}${this.stage}API`, {
             description: 'API for Ai Pencil',
@@ -221,7 +257,7 @@ export class AsynStack extends Stack {
 
         const textToTextEndpoint = api.root.addResource('text-to-text');
         const uploadImageEndpoint = api.root.addResource('upload-image');
-        // const promptStylesEndpoint = inferenceApi.root.addResource('prompt-styles');
+        const promptStylesEndpoint = api.root.addResource('prompt-styles');
         // const feedbackEndpoint = inferenceApi.root.addResource('feedback');
 
         // userEndpoint.addMethod('POST', new LambdaIntegration(this.userLambda));
@@ -231,7 +267,7 @@ export class AsynStack extends Stack {
         textToTextEndpoint.addMethod('POST', new LambdaIntegration(this.textToTextLambda));
         uploadImageEndpoint.addMethod('POST', new LambdaIntegration(this.uploadImageLambda));
         // feedbackEndpoint.addMethod('POST', new LambdaIntegration(this.feedbackLambda));
-        // promptStylesEndpoint.addMethod('GET', new LambdaIntegration(this.promptStylesLambda));
+        promptStylesEndpoint.addMethod('GET', new LambdaIntegration(this.promptStylesLambda));
         return api
     }
 }
