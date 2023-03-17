@@ -21,7 +21,7 @@ def get_stability_api_key():
 
 def get_base64_string(image):
     buffered = BytesIO()
-    image.save(buffered, format="JPEG")
+    image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
     return img_str
 
@@ -34,33 +34,43 @@ def handler(event, context):
     prompt = body['prompt'] 
     width = int(body.get('width', 512))
     height = int(body.get('height', 512))
+    mask_img = body.get('mask', None)
 
     # Advanced options
-    advanced_options = body['advancedOptions']
-    cfg_scale = advanced_options['cfgScale']
+    advanced_options = body.get('advancedOptions', {})
+    cfg_scale = advanced_options.get('cfgScale', 7.0)
     seed = advanced_options['seed']
-    sampler_index = advanced_options['samplerIndex']
-    denoising_strength = advanced_options['denoisingStrength']
+    # sampler_index = advanced_options.get('samplerIndex', generation.SAMPLER_K_DPMPP_2M)
+    denoising_strength = advanced_options.get('denoisingStrength', 0.6)
 
     init_img = None
     if body and 'image' in body:
         init_img = body['image']
 
+    if mask_img:
+        engine = 'stable-inpainting-512-v2-0'
+    else:
+        engine = 'stable-diffusion-512-v2-1'
+
     # Create client connection
     stability_api = client.StabilityInference(
         key=get_stability_api_key(), # API Key reference.
         verbose=True, # Print debug messages.
-        engine="stable-diffusion-v1-5",  # Potentially use different engine for inpainting
+        engine=engine,  # Potentially use different engine for inpainting
     )
 
     # Call stability API
     if init_img: 
         # Image to image
         pil_init_image = Image.open(BytesIO(base64.b64decode(init_img)))
+        pil_mask_image = None
+        if (mask_img):
+            pil_mask_image = Image.open(BytesIO(base64.b64decode(mask_img)))
         # pil_init_image.thumbnail((512, 512))
         answers = stability_api.generate(
             prompt=prompt,
             init_image=pil_init_image,
+            mask_image=pil_mask_image,
             start_schedule=denoising_strength,
             seed=seed,
             steps=30,

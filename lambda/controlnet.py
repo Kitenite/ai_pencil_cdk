@@ -24,9 +24,7 @@ def handler(event, context):
     # Set up replicate
     set_replicate_api_key()
     # TODO: Other controlnet models
-    model = replicate.models.get("jagilley/controlnet")
-    version = model.versions.get("8ebda4c70b3ea2a2bf86e44595afb562a2cdf85525c620f1671a78113c9f325b")
-    
+
     # For testing
     # body = event["body"]
     # For production
@@ -49,6 +47,14 @@ def handler(event, context):
     ddim_steps = advanced_options.get('ddimSteps', 20)
     
     seed = advanced_options.get('seed', None)
+
+    if model_type == "scribble":
+        # More optimized verison of controlnet scribble
+        model = replicate.models.get("jagilley/controlnet-scribble")
+        version = model.versions.get("435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2de23e143fdb0117")
+    else:
+        model = replicate.models.get("jagilley/controlnet")
+        version = model.versions.get("8ebda4c70b3ea2a2bf86e44595afb562a2cdf85525c620f1671a78113c9f325b")
 
     # https://replicate.com/jagilley/controlnet-scribble/versions/435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2de23e143fdb0117#input
     inputs = {
