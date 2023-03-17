@@ -1,7 +1,8 @@
 class PromptStyleData:
     def __init__(self):
         self.s3KeyMap = {
-            "3-D": "3-D/3-D.jpg",
+            "None": "None/None.jpeg",
+            "3-D": "3-D/3-D.jpeg",
             "3-D Render": "3-D Render/3-D Render.jpeg",
             "Acrylic": "Acrylic/Acrylic.jpeg",
             "Ambient": "Ambient/Ambient.jpeg",
@@ -30,6 +31,7 @@ class PromptStyleData:
             "Oil": "Oil/Oil.jpeg",
             "Origami": "Origami/Origami.jpeg",
             "Painting": "Painting/Painting.jpeg",
+            "Panorama": "Panorama/Panorama.jpeg",
             "Pastel": "Pastel/Pastel.jpeg",
             "Photography": "Photography/Photography.jpeg",
             "Polaroid": "Polaroid/Polaroid.jpeg",
@@ -257,6 +259,7 @@ class PromptStyleData:
         }
 
         PROMPT_STYLES = [
+            NONE,
             {
                 "key": "Painting",
                 "prefix": "painting",
