@@ -6,7 +6,7 @@ import boto3
 
 secrets = boto3.client('secretsmanager')
 open_ai_key_arn = os.environ.get('OPEN_AI_KEY_ARN')
-
+prompt_helper = ""
 def get_openai_api_key():
     print("Get stability api key")
     response = secrets.get_secret_value(
@@ -26,6 +26,8 @@ def handler(event, context):
 
         # Define the mock data
         prompt = json.loads(event['body'])['prompt']
+        
+        prompt = prompt + prompt_helper
 
         # Call the GPT-3 API
         response = openai.Completion.create(
@@ -35,9 +37,12 @@ def handler(event, context):
         )
         if 'choices' in response and response['choices']:
             # Return the generated text
+            res_text = response['choices'][0]['text'].strip(" ").strip("\n").split("###")
+            pos_prompt = res_text[0].strip("Positive Prompt:")
+            neg_prompt = res_text[1].strip("Negative Prompt:")
             return {
                 'statusCode': 200,
-                'body': json.dumps({'response': response['choices'][0]['text']})
+                'body': json.dumps({'positive': pos_prompt, 'negative': neg_prompt})
             }
         else:
             return {
@@ -70,3 +75,45 @@ class TestGPT3APIHandler(unittest.TestCase):
         response = handler(event, None)
         self.assertEqual(response['statusCode'], 500)
         self.assertEqual(json.loads(response['body'])['error'], 'Error generating response')
+
+
+prompt_helper ="""
+use this information to learn about Stable diffusion Prompting, and use it to create prompts.
+Stable Diffusion is an AI art generation model similar to DALLE-2. 
+It can be used to create impressive artwork by using positive and negative prompts. Positive prompts describe what should be included in the image. 
+very important is that the Positive Prompts are usually created in a specific structure: 
+(Subject), (Action), (Context), (Environment), (Lightning),  (Artist), (Style), (Medium), (Type), (Color Scheme), (Computer graphics), (Quality), (etc.)
+Subject: Person, animal, landscape
+Action: dancing, sitting, surveil
+Verb: What the subject is doing, such as standing, sitting, eating, dancing, surveil
+Adjectives: Beautiful, realistic, big, colorful
+Context: Alien planet's pond, lots of details
+Environment/Context: Outdoor, underwater, in the sky, at night
+Lighting: Soft, ambient, neon, foggy, Misty
+Emotions: Cosy, energetic, romantic, grim, loneliness, fear
+Artist: Pablo Picasso, Van Gogh, Da Vinci, Hokusai 
+Art medium: Oil on canvas, watercolor, sketch, photography
+style: Polaroid, long exposure, monochrome, GoPro, fisheye, bokeh, Photo, 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3
+Art style: Manga, fantasy, minimalism, abstract, graffiti
+Material: Fabric, wood, clay, Realistic, illustration, drawing, digital painting, photoshop, 3D
+Color scheme: Pastel, vibrant, dynamic lighting, Green, orange, red
+Computer graphics: 3D, octane, cycles
+Illustrations: Isometric, pixar, scientific, comic
+Quality: High definition, 4K, 8K, 64K
+example Prompts:
+- overwhelmingly beautiful eagle framed with vector flowers, long shiny wavy flowing hair, polished, ultra detailed vector floral illustration mixed with hyper realism, muted pastel colors, vector floral details in background, muted colors, hyper detailed ultra intricate overwhelming realism in detailed complex scene with magical fantasy atmosphere, no signature, no watermark
+- electronic robot and office ,unreal engine, cozy indoor lighting, artstation, detailed, digital painting, cinematic,character design by mark ryden and pixar and hayao miyazaki, unreal 5, daz, hyperrealistic, octane render
+- underwater world, plants, flowers, shells, creatures, high detail, sharp focus, 4k
+- picture of dimly lit living room, minimalist furniture, vaulted ceiling, huge room, floor to ceiling window with an ocean view, nighttime
+- A beautiful painting of water spilling out of a broken pot, earth colored clay pot, vibrant background, by greg rutkowski and thomas kinkade, Trending on artstation, 8k, hyperrealistic, extremely detailed
+- luxus supercar in drive way of luxus villa in black dark modern house with sunlight black an white modern
+- highly detailed, majestic royal tall ship on a calm sea, realistic painting, by Charles Gregory Artstation and Antonio Jacobsen and Edward Moran, (long shot), clear blue sky, intricate details, 4k
+- smooth meat table, restaurant, paris, elegant, lights
+
+Negative prompt are things you don't want to be included in the generated images, everything in one word divided by only commas not period. 
+Example negative prompts:
+- lowres, text, error, cropped, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, username, watermark, signature
+Very important: use an artist matching to the art style , or don't write any artist if it is realistic style or some of that.
+
+I want you to write me one full detailed prompt about the idea written from me, first line in Positive Prompt, Follow the structure of the example prompts, then a new line with ‘###’, write in new line for Negative Prompts about the idea written from me in words divided by only commas not period. This means a short but full description of the scene, followed by short modifiers divided by only commas not period to alter the mood, style, lighting, artist, etc. 
+"""
