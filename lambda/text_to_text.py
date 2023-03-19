@@ -37,12 +37,12 @@ def handler(event, context):
         )
         if 'choices' in response and response['choices']:
             # Return the generated text
-            res_text = response['choices'][0]['text'].strip(" ").strip("\n").split("###")
-            pos_prompt = res_text[0].strip("Positive Prompt:")
-            neg_prompt = res_text[1].strip("Negative Prompt:")
+            res_text = response['choices'][0]['text']
+            pos_prompt = res_text.strip(" ").strip("\n")
+            # neg_prompt = res_text[1].strip("Negative Prompt:")
             return {
                 'statusCode': 200,
-                'body': json.dumps({'positive': pos_prompt, 'negative': neg_prompt})
+                'body': json.dumps({'positive': pos_prompt, 'negative': ''})
             }
         else:
             return {
@@ -80,8 +80,8 @@ class TestGPT3APIHandler(unittest.TestCase):
 prompt_helper ="""
 use this information to learn about Stable diffusion Prompting, and use it to create prompts.
 Stable Diffusion is an AI art generation model similar to DALLE-2. 
-It can be used to create impressive artwork by using positive and negative prompts. Positive prompts describe what should be included in the image. 
-very important is that the Positive Prompts are usually created in a specific structure: 
+It can be used to create impressive artwork by using prompts. Prompts describe what should be included in the image. 
+very important is that the Prompts are usually created in a specific structure: 
 (Subject), (Action), (Context), (Environment), (Lightning),  (Artist), (Style), (Medium), (Type), (Color Scheme), (Computer graphics), (Quality), (etc.)
 Subject: Person, animal, landscape
 Action: dancing, sitting, surveil
@@ -110,10 +110,7 @@ example Prompts:
 - highly detailed, majestic royal tall ship on a calm sea, realistic painting, by Charles Gregory Artstation and Antonio Jacobsen and Edward Moran, (long shot), clear blue sky, intricate details, 4k
 - smooth meat table, restaurant, paris, elegant, lights
 
-Negative prompt are things you don't want to be included in the generated images, everything in one word divided by only commas not period. 
-Example negative prompts:
-- lowres, text, error, cropped, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, username, watermark, signature
 Very important: use an artist matching to the art style , or don't write any artist if it is realistic style or some of that.
 
-I want you to write me one full detailed prompt about the idea written from me, first line in Positive Prompt, Follow the structure of the example prompts, then a new line with ‘###’, write in new line for Negative Prompts about the idea written from me in words divided by only commas not period. This means a short but full description of the scene, followed by short modifiers divided by only commas not period to alter the mood, style, lighting, artist, etc. 
+I want you to write me one full detailed prompt about the idea written from me. Limit to 350 characters.
 """
