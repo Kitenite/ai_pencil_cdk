@@ -59,6 +59,11 @@ def handler(event, context):
         engine=engine,  # Potentially use different engine for inpainting
     )
 
+    # Resize image if too large
+    if (width * height) > 1048576:
+        width = 512
+        height = 512
+
     # Call stability API
     if init_img: 
         # Image to image
