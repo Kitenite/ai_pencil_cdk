@@ -46,7 +46,7 @@ def handler(event, context):
     added_prompt = advanced_options.get('addedPrompt', "best quality, extremely detailed")
     ddim_steps = advanced_options.get('ddimSteps', 20)
     
-    seed = advanced_options.get('seed', None)
+    seed = advanced_options.get('seed', -1)
 
     if model_type == "scribble":
         # More optimized verison of controlnet scribble
