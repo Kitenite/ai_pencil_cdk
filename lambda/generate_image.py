@@ -111,7 +111,7 @@ def handler(event, context):
                 response = {
                     "statusCode": 500,
                     'headers': { 'Content-Type': 'application/json' },
-                    "body": json.dumps({'error': error_message})
+                    "body": json.dumps({'error': error_message, 'filtered': True})
                 }
                 print(error_message)
                 return response
